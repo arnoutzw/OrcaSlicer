@@ -66,6 +66,8 @@ private:
 
     static bool get_stream_url(std::string *url = nullptr);
 
+    std::string rtsp_host_path(std::string const &scheme, std::string const &default_path) const;
+
 private:
     static const wxMediaState MEDIASTATE_IDLE = (wxMediaState) 3;
     static const wxMediaState MEDIASTATE_INITIALIZING = (wxMediaState) 4;
@@ -79,6 +81,7 @@ private:
     std::string m_lan_ip;
     std::string m_lan_user;
     std::string m_lan_passwd;
+    std::string m_lan_rtsp_url;
     std::string m_dev_ver;
     std::string m_tutk_state;
     bool m_camera_exists = false;

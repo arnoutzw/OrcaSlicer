@@ -153,6 +153,7 @@ void MediaPlayCtrl::SetMachineObject(MachineObject* obj)
         m_remote_proto   = obj->get_liveview_remote();
         m_lan_ip         = obj->dev_ip;
         m_lan_passwd     = obj->get_access_code();
+        m_lan_rtsp_url   = obj->local_rtsp_url;
         m_device_busy    = obj->is_camera_busy_off();
         m_tutk_state     = obj->tutk_state;
 
@@ -166,6 +167,7 @@ void MediaPlayCtrl::SetMachineObject(MachineObject* obj)
         m_lan_proto = MachineObject::LVL_None;
         m_lan_ip.clear();
         m_lan_passwd.clear();
+        m_lan_rtsp_url.clear();
         m_dev_ver.clear();
         m_tutk_state.clear();
         m_remote_proto = 0;
@@ -250,6 +252,18 @@ void refresh_agora_url(char const* device, char const* dev_ver, char const* chan
     });
 }
 
+std::string MediaPlayCtrl::rtsp_host_path(std::string const &scheme, std::string const &default_path) const
+{
+    if (!m_lan_rtsp_url.empty() && boost::algorithm::starts_with(m_lan_rtsp_url, scheme)) {
+        std::string rest = m_lan_rtsp_url.substr(scheme.length());
+        // Strip embedded credentials from the device-reported URL
+        auto at = rest.find('@');
+        if (at != std::string::npos) rest = rest.substr(at + 1);
+        return rest;
+    }
+    return m_lan_ip + default_path;
+}
+
 void MediaPlayCtrl::Play()
 {
     if (!m_next_retry.IsValid() || wxDateTime::Now() < m_next_retry)
@@ -286,9 +300,9 @@ void MediaPlayCtrl::Play()
         if (m_lan_proto == MachineObject::LVL_Local)
             url = "bambu:///local/" + m_lan_ip + ".?port=6000&user=" + m_lan_user + "&passwd=" + m_lan_passwd;
         else if (m_lan_proto == MachineObject::LVL_Rtsps)
-            url = "bambu:///rtsps___" + m_lan_user + ":" + m_lan_passwd + "@" + m_lan_ip + "/streaming/live/1?proto=rtsps";
+            url = "bambu:///rtsps___" + m_lan_user + ":" + m_lan_passwd + "@" + rtsp_host_path("rtsps://", "/streaming/live/1") + "?proto=rtsps";
         else if (m_lan_proto == MachineObject::LVL_Rtsp)
-            url = "bambu:///rtsp___" + m_lan_user + ":" + m_lan_passwd + "@" + m_lan_ip + "/streaming/live/1?proto=rtsp";
+            url = "bambu:///rtsp___" + m_lan_user + ":" + m_lan_passwd + "@" + rtsp_host_path("rtsp://", "/streaming/live/1") + "?proto=rtsp";
         url += "&device=" + m_machine;
         url += "&net_ver=" + agent_version;
         url += "&dev_ver=" + m_dev_ver;
@@ -520,9 +534,9 @@ void MediaPlayCtrl::ToggleStream()
         if (m_lan_proto == MachineObject::LVL_Local)
             url = "bambu:///local/" + m_lan_ip + ".?port=6000&user=" + m_lan_user + "&passwd=" + m_lan_passwd;
         else if (m_lan_proto == MachineObject::LVL_Rtsps)
-            url = "bambu:///rtsps___" + m_lan_user + ":" + m_lan_passwd + "@" + m_lan_ip + "/streaming/live/1?proto=rtsps";
+            url = "bambu:///rtsps___" + m_lan_user + ":" + m_lan_passwd + "@" + rtsp_host_path("rtsps://", "/streaming/live/1") + "?proto=rtsps";
         else if (m_lan_proto == MachineObject::LVL_Rtsp)
-            url = "bambu:///rtsp___" + m_lan_user + ":" + m_lan_passwd + "@" + m_lan_ip + "/streaming/live/1?proto=rtsp";
+            url = "bambu:///rtsp___" + m_lan_user + ":" + m_lan_passwd + "@" + rtsp_host_path("rtsp://", "/streaming/live/1") + "?proto=rtsp";
         url += "&device=" + into_u8(m_machine);
         url += "&dev_ver=" + m_dev_ver;
         BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl::ToggleStream: " << hide_passwd(hide_id_middle_string(url, url.find(m_lan_ip), m_lan_ip.length()), {m_lan_passwd});
