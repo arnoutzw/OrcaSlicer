@@ -179,6 +179,7 @@ gst_bambusrc_init (GstBambuSrc * src)
 {
   src->location = NULL;
   src->tnl = NULL;
+  src->frame_rate = 30;
 
   gst_base_src_set_automatic_eos (GST_BASE_SRC (src), FALSE);
   gst_base_src_set_live(GST_BASE_SRC(src), TRUE);
@@ -280,7 +281,8 @@ gst_bambusrc_create (GstPushSrc * psrc, GstBuffer ** outbuf)
 
   while ((rv = BAMBULIB(Bambu_ReadSample)(src->tnl, &sample)) == Bambu_would_block) {
     GST_DEBUG_OBJECT(src, "create would block");
-    usleep(33333); /* 30Hz */
+    /* Poll at 2x the device frame rate to pick up frames with low latency */
+    usleep(500000 / src->frame_rate);
   }
 
   if (rv == Bambu_stream_end) {
@@ -396,6 +398,8 @@ gst_bambusrc_start (GstBaseSrc * bsrc)
     GST_INFO_OBJECT (src, "stream %d type=%d, sub_type=%d", i, info.type, info.sub_type);
     if (info.type == VIDE) {
       src->video_type = info.sub_type;
+      if (info.format.video.frame_rate > 0)
+        src->frame_rate = info.format.video.frame_rate;
       GST_INFO_OBJECT (src, " width %d height=%d, frame_rate=%d",
           info.format.video.width, info.format.video.height, info.format.video.frame_rate);
     }
